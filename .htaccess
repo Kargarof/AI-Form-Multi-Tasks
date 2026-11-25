@@ -1,0 +1,9 @@
+# AI Tarea · protección básica en Apache (IONOS)
+Options -Indexes
+DirectoryIndex index.php
+
+# Nada de acceso directo a la configuración, librerías ni datos
+<FilesMatch "^(config\.php|config\.sample\.php|README\.md|\.gitignore)$">
+  Require all denied
+</FilesMatch>
+RedirectMatch 403 ^.*/(lib|data|\.git)(/|$)
