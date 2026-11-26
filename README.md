@@ -63,7 +63,7 @@ Cada vez que se sube un cambio a la rama `main`, GitHub Actions (`.github/workfl
 | `SFTP_HOST` | El servidor, p. ej. `access-5012345678.webspace-host.com` |
 | `SFTP_USER` | El usuario SFTP |
 | `SFTP_PASSWORD` | La contraseña de ese usuario |
-| `SFTP_PATH` | La carpeta de la app tal como la ves al conectarte por SFTP, p. ej. `/tareas` |
+| `carpeta del servidor` | La carpeta de la app tal como la ves al conectarte por SFTP, p. ej. `/tareas` |
 
 Mientras falten secretos, la publicación se salta con un aviso, sin errores. Para publicar sin subir cambios: pestaña *Actions > Publicar en aiformconsulting.com/tareas > Run workflow*.
 

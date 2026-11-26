@@ -1,9 +1,9 @@
 # Publica la app en aiformconsulting.com/tareas cada vez que se sube un cambio a la rama main.
-# Necesita 4 secretos en GitHub (Settings > Secrets and variables > Actions):
+# Necesita 3 secretos en GitHub (Settings > Secrets and variables > Actions):
 #   SFTP_HOST      servidor SFTP de IONOS (p. ej. access-5012345678.webspace-host.com)
 #   SFTP_USER      usuario SFTP de IONOS
 #   SFTP_PASSWORD  contraseña de ese usuario SFTP
-#   SFTP_PATH      carpeta de la app en el servidor (p. ej. /tareas)
+#   (la carpeta de destino es fija: AI_Form/tareas, la que sirve aiformconsulting.com/tareas)
 # Nunca se sube ni se borra config.php ni la carpeta data/ del servidor.
 
 name: Publicar en aiformconsulting.com/tareas
@@ -31,10 +31,9 @@ jobs:
           SFTP_HOST: ${{ secrets.SFTP_HOST }}
           SFTP_USER: ${{ secrets.SFTP_USER }}
           SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
-          SFTP_PATH: ${{ secrets.SFTP_PATH }}
         run: |
           missing=""
-          for v in SFTP_HOST SFTP_USER SFTP_PASSWORD SFTP_PATH; do
+          for v in SFTP_HOST SFTP_USER SFTP_PASSWORD; do
             [ -z "${!v}" ] && missing="$missing $v"
           done
           if [ -n "$missing" ]; then
@@ -63,13 +62,14 @@ jobs:
           SFTP_HOST: ${{ secrets.SFTP_HOST }}
           SFTP_USER: ${{ secrets.SFTP_USER }}
           LFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
-          SFTP_PATH: ${{ secrets.SFTP_PATH }}
+          SFTP_PATH: AI_Form/tareas
         run: |
           lftp -c "
             set sftp:auto-confirm yes;
             set net:timeout 30; set net:max-retries 3; set net:reconnect-interval-base 5;
             open --env-password -u \"$SFTP_USER\" sftp://$SFTP_HOST;
-            rm -r -f \"$SFTP_PATH/.git\";
+            rm -r -f aiformconsulting.com;
+            rm -f \"$SFTP_PATH/README.md\";
             mirror --reverse --delete --parallel=4 --verbose=1 \
               --exclude ^\.git/ \
               --exclude ^\.gitignore$ \
