@@ -12,7 +12,6 @@ jobs:
           SFTP_PATH: ${{ secrets.SFTP_PATH }}
         run: |
           echo "SFTP_PATH empieza por barra: $([[ "$SFTP_PATH" == /* ]] && echo si || echo no); longitud ${#SFTP_PATH}"
-          echo "SFTP_PATH (sin secreto, letra a letra): $(echo "$SFTP_PATH" | sed 's/./& /g')"
           lftp -c "
             set sftp:auto-confirm yes;
             open --env-password -u \"$SFTP_USER\" sftp://$SFTP_HOST;
