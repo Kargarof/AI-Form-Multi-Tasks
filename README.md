@@ -56,14 +56,15 @@ Cada vez que se sube un cambio a la rama `main`, GitHub Actions (`.github/workfl
 
 **Nunca se sube ni se borra** `config.php` ni la carpeta `data/` del servidor, así que la configuración y las claves se quedan solo allí.
 
-**Configuración inicial** (una sola vez). En GitHub, ve a *Settings > Secrets and variables > Actions > New repository secret* y crea estos cuatro secretos con los datos de IONOS (*Hosting > SFTP & SSH*):
+**Configuración inicial** (una sola vez). En GitHub, ve a *Settings > Secrets and variables > Actions > New repository secret* y crea estos tres secretos con los datos de IONOS (*Hosting > SFTP & SSH*):
 
 | Secreto | Qué poner |
 |---|---|
 | `SFTP_HOST` | El servidor, p. ej. `access-5012345678.webspace-host.com` |
 | `SFTP_USER` | El usuario SFTP |
 | `SFTP_PASSWORD` | La contraseña de ese usuario |
-| `carpeta del servidor` | La carpeta de la app tal como la ves al conectarte por SFTP, p. ej. `/tareas` |
+
+La carpeta de destino está fijada en el flujo: `AI_Form/tareas` (la que sirve aiformconsulting.com/tareas). Nunca se sube ni se borra `config.php` ni `data/`.
 
 Mientras falten secretos, la publicación se salta con un aviso, sin errores. Para publicar sin subir cambios: pestaña *Actions > Publicar en aiformconsulting.com/tareas > Run workflow*.
 
