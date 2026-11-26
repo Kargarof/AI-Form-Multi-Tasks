@@ -4,7 +4,7 @@
  * - Login, logout, alta y cualquier petición que cambie datos: siempre a la red, nunca se guardan.
  * Sube VERSION cada vez que publiques cambios.
  */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const STATIC_CACHE = `aiform-mt-static-${VERSION}`;
 const DATA_CACHE = 'aiform-mt-data';
 const PRECACHE = [
@@ -91,11 +91,11 @@ self.addEventListener('fetch', (event) => {
   if (!inScope(url)) return;
 
   const path = rel(url);
-  if (/^(login|logout|setup)\.php/.test(path)) return; // siempre a la red
+  if (/^(welcome|oauth)\.php/.test(path)) return; // siempre a la red
 
   if (path.startsWith('api.php')) {
     const action = url.searchParams.get('action');
-    if (action === 'projects' || action === 'tasks') event.respondWith(networkFirst(request));
+    if (['projects', 'tasks', 'me'].includes(action)) event.respondWith(networkFirst(request));
     return;
   }
   if (request.mode === 'navigate') {

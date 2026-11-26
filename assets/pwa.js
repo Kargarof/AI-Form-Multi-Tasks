@@ -14,13 +14,6 @@
     });
   }
 
-  // Al cerrar sesión, borra la copia de las tareas guardada en este dispositivo.
-  document.addEventListener('submit', (e) => {
-    if (!e.target.matches('form.logout')) return;
-    navigator.serviceWorker?.controller?.postMessage('clear-data');
-    if ('caches' in window) caches.delete('aiform-mt-data').catch(() => {});
-  }, true);
-
   // ---------- Botón «Instalar» ----------
   let deferredPrompt = null;
 

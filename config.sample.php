@@ -1,5 +1,5 @@
 <?php
-// Copia este archivo como config.php y rellena los datos de tu base de datos.
+// Copia este archivo como config.php y rellena tus datos.
 // config.php no se sube a GitHub (está en .gitignore).
 
 return [
@@ -14,6 +14,16 @@ return [
         // 'user' => null,
         // 'pass' => null,
     ],
+
+    // Iniciar sesión con Google (opcional). Si lo dejas vacío, el botón de Google no aparece
+    // y la app funciona solo con cuentas de dispositivo y códigos de acceso.
+    // Cómo conseguir estos datos: README.md > "Iniciar sesión con Google".
+    'google' => [
+        'client_id'     => '',
+        'client_secret' => '',
+        'redirect_uri'  => 'https://aiformconsulting.com/tareas/oauth.php',
+    ],
+
     'timezone' => 'America/Denver',
     'app_name' => 'AI Form Multi Tasks',
 ];
