@@ -13,8 +13,8 @@ function db(): PDO
     }
     global $config;
     $pdo = new PDO(
-        $config['db']['dsn'],
-        $config['db']['user'] ?? null,
+        trim((string) $config['db']['dsn']),
+        isset($config['db']['user']) ? trim((string) $config['db']['user']) : null,
         $config['db']['pass'] ?? null,
         [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
