@@ -1,0 +1,22 @@
+name: Diagnóstico SFTP
+on: workflow_dispatch
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+      - env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_USER: ${{ secrets.SFTP_USER }}
+          LFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
+          SFTP_PATH: ${{ secrets.SFTP_PATH }}
+        run: |
+          echo "SFTP_PATH empieza por barra: $([[ "$SFTP_PATH" == /* ]] && echo si || echo no); longitud ${#SFTP_PATH}"
+          echo "SFTP_PATH (sin secreto, letra a letra): $(echo "$SFTP_PATH" | sed 's/./& /g')"
+          lftp -c "
+            set sftp:auto-confirm yes;
+            open --env-password -u \"$SFTP_USER\" sftp://$SFTP_HOST;
+            echo '== Carpeta inicial =='; pwd; cls -1 -l;
+            echo '== Dentro de SFTP_PATH =='; cd \"$SFTP_PATH\"; pwd; cls -1 -l --time-style=%FT%T;
+          " 2>&1 | sed 's/^/  /'
+          lftp -c "set sftp:auto-confirm yes; open --env-password -u \"$SFTP_USER\" sftp://$SFTP_HOST; find -d 3 . " 2>&1 | grep -iE "sw\.js|welcome\.php" | head -20
