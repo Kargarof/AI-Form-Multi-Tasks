@@ -103,6 +103,7 @@ $csrf = csrf_token();
       <button class="btn" type="submit">Entrar con el código</button>
     </form>
   </details>
+  <p class="legal-footer"><a href="privacidad.html">Privacidad</a> · <a href="condiciones.html">Condiciones</a></p>
 </main>
 <script>
   (function () {

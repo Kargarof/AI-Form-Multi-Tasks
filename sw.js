@@ -4,7 +4,7 @@
  * - Login, logout, alta y cualquier petición que cambie datos: siempre a la red, nunca se guardan.
  * Sube VERSION cada vez que publiques cambios.
  */
-const VERSION = 'v2';
+const VERSION = 'v3';
 const STATIC_CACHE = `aiform-mt-static-${VERSION}`;
 const DATA_CACHE = 'aiform-mt-data';
 const PRECACHE = [

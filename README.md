@@ -100,7 +100,7 @@ Al mantener pulsado el icono de la app aparece el acceso directo **Nueva tarea**
 
 **Sin conexión:** la app abre igualmente y muestra la última copia guardada de los proyectos y tareas, en solo lectura. Al cerrar sesión, esa copia se borra del dispositivo.
 
-**Cuando publiques cambios**, sube el número de `VERSION` en `sw.js` (por ejemplo, de `v2` a `v3`) para que los dispositivos donde ya está instalada descarguen la versión nueva.
+**Cuando publiques cambios**, sube el número de `VERSION` en `sw.js` (por ejemplo, de `v3` a `v4`) para que los dispositivos donde ya está instalada descarguen la versión nueva.
 
 ## Probarlo en tu ordenador
 
@@ -125,6 +125,7 @@ Después abre `http://localhost:8000`.
 | `assets/` | Estilos (`app.css`), lógica del tablero (`app.js`) e iconos |
 | `manifest.webmanifest`, `sw.js`, `offline.html` | App instalable: datos de la app, funcionamiento sin conexión y pantalla sin conexión |
 | `assets/pwa.js`, `assets/icons/` | Botón «Instalar» e iconos de la app |
+| `privacidad.html`, `condiciones.html` | Política de privacidad y condiciones del servicio (Google las enlaza en la pantalla de inicio de sesión) |
 | `config.sample.php` | Plantilla de configuración |
 
 ## Seguridad
