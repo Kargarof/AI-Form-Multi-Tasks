@@ -2,11 +2,10 @@
 Options -Indexes
 DirectoryIndex index.php
 
-# Nada de acceso directo a la configuración, librerías ni datos
-<FilesMatch "^(config\.php|config\.sample\.php|README\.md|\.gitignore)$">
-  Require all denied
-</FilesMatch>
-RedirectMatch 403 ^.*/(lib|data|\.git)(/|$)
+# Nada de acceso directo a la configuración, librerías ni datos.
+# (En IONOS «Require all denied» dentro de FilesMatch no se aplica; RedirectMatch sí.)
+RedirectMatch 403 ^.*/(config\.php|config\.sample\.php|README\.md|\.gitignore|\.htaccess)$
+RedirectMatch 403 ^.*/(lib|data|\.git|\.github)(/|$)
 
 # App instalable (PWA)
 AddType application/manifest+json .webmanifest
