@@ -9,6 +9,31 @@ if (!is_file($configFile)) {
 }
 
 $config = require $configFile;
+
+// Los errores se guardan en data/php-errors.log (carpeta bloqueada desde la web) y nunca se muestran al visitante.
+$dataDir = __DIR__ . '/../data';
+if (!is_dir($dataDir)) {
+    @mkdir($dataDir, 0700, true);
+}
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ini_set('error_log', $dataDir . '/php-errors.log');
+set_exception_handler(static function (Throwable $ex): void {
+    error_log(sprintf('%s: %s en %s:%d', get_class($ex), $ex->getMessage(), $ex->getFile(), $ex->getLine()));
+    if (!headers_sent()) {
+        http_response_code(500);
+    }
+    $api = str_ends_with($_SERVER['SCRIPT_NAME'] ?? '', 'api.php');
+    if ($api) {
+        if (!headers_sent()) header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['error' => 'Error del servidor. Inténtalo de nuevo en un momento.']);
+    } else {
+        if (!headers_sent()) header('Content-Type: text/html; charset=utf-8');
+        echo '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            . '<title>Error</title><body style="font-family:system-ui;background:#111827;color:#e5e7eb;padding:2rem">'
+            . '<h1 style="color:#C7AA89">Algo ha fallado</h1><p>Vuelve a intentarlo en un momento.</p><p><a style="color:#C7AA89" href="./">Volver</a></p>';
+    }
+});
 date_default_timezone_set($config['timezone'] ?? 'America/Denver');
 
 define('BASE_PATH', rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/') . '/');
