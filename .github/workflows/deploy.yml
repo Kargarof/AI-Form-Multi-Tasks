@@ -54,6 +54,7 @@ jobs:
           sed -i "s/const VERSION = '[^']*';/const VERSION = '${GITHUB_SHA::8}';/" sw.js
           # Así los móviles cargan los scripts y estilos nuevos a la primera tras cada publicación.
           sed -i -E "s#assets/(app|pwa)\.(js|css)\"#assets/\1.\2?v=${GITHUB_SHA::8}\"#g" index.php welcome.php lib/pwa_head.php
+          sed -i -E "s#(assets/icons/[a-z0-9-]+\.png)\"#\1?v=${GITHUB_SHA::8}\"#g" lib/pwa_head.php
           grep -ho 'assets/[a-z]*\.[a-z]*?v=[0-9a-f]*' index.php welcome.php lib/pwa_head.php
 
       - name: Instalar lftp
