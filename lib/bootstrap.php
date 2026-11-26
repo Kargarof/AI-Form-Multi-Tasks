@@ -15,7 +15,7 @@ $basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')
 $isHttps  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
 
-session_name('aitarea');
+session_name('aiform_mt');
 session_set_cookie_params([
     'lifetime' => 60 * 60 * 24 * 30,
     'path'     => $basePath,

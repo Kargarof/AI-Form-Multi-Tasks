@@ -5,7 +5,7 @@ declare(strict_types=1);
 function auth_page(string $eyebrow, string $title, string $formHtml, ?string $error = null): void
 {
     global $config;
-    $appName = $config['app_name'] ?? 'AI Tarea';
+    $appName = $config['app_name'] ?? 'AI Form Multi Tasks';
     ?><!doctype html>
 <html lang="es">
 <head>
@@ -17,6 +17,7 @@ function auth_page(string $eyebrow, string $title, string $formHtml, ?string $er
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/app.css">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<?php include __DIR__ . '/pwa_head.php'; ?>
 </head>
 <body class="auth">
 <main class="panel auth-card">

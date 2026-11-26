@@ -57,6 +57,11 @@
       throw new Error('Sin conexión. Revisa tu internet.');
     }
     if (res.status === 401) { location.href = 'login.php'; throw new Error('Sesión caducada'); }
+    if (!body) {
+      const offline = res.headers.get('X-Offline-Copy') === '1';
+      document.body.classList.toggle('offline-copy', offline);
+      window.dispatchEvent(new Event('aiform:offline-copy'));
+    }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'Algo ha fallado.');
     return data;
@@ -95,7 +100,7 @@
     const { projects } = await api('projects');
     state.projects = projects;
     if (!projects.some((p) => p.id === state.projectId)) {
-      const saved = Number(store.get('aitarea.project'));
+      const saved = Number(store.get('aiform-mt.project'));
       state.projectId = projects.some((p) => p.id === saved) ? saved : (projects[0]?.id ?? null);
     }
     renderChips();
@@ -129,7 +134,7 @@
 
   async function selectProject(id) {
     state.projectId = id;
-    store.set('aitarea.project', String(id));
+    store.set('aiform-mt.project', String(id));
     renderChips();
     await loadTasks();
   }
@@ -139,7 +144,7 @@
     const p = currentProject();
     if (!p) { state.tasks = []; return; }
     els.title.textContent = p.name;
-    document.title = `${p.name} · AI Tarea`;
+    document.title = `${p.name} · AI Form Multi Tasks`;
     const { tasks } = await api('tasks', { params: { project_id: p.id } });
     state.tasks = tasks;
     renderBoard();
@@ -317,7 +322,7 @@
       const { project } = await api('project_save', { body: { id: state.editingProject?.id, name } });
       els.projectDialog.close();
       state.projectId = project.id;
-      store.set('aitarea.project', String(project.id));
+      store.set('aiform-mt.project', String(project.id));
       await loadProjects();
       await loadTasks();
       toast(state.editingProject ? 'Proyecto guardado' : 'Proyecto creado');
@@ -363,6 +368,12 @@
     try {
       await loadProjects();
       await loadTasks();
+      // Acceso directo «Nueva tarea» del icono de la app
+      const params = new URLSearchParams(location.search);
+      if (params.has('nueva')) {
+        history.replaceState(null, '', location.pathname);
+        if (state.projectId) openTask(null, 'pendiente'); else openProject();
+      }
     } catch (err) {
       els.title.textContent = 'No se pudo cargar';
       toast(err.message, true);

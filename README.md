@@ -1,4 +1,4 @@
-# AI Tarea
+# AI Form Multi Tasks
 
 Gestor de tareas de **AI Form Consulting**, dividido por proyectos. Cada proyecto se ve como un tablero con tres columnas: **Pendiente**, **En curso** y **Completado**.
 
@@ -13,6 +13,7 @@ Se publica en `https://aiformconsulting.com/tareas`.
 - Acceso con usuario y contraseña. La pantalla de alta se desactiva en cuanto existe un usuario.
 - Funciona en el móvil: en pantallas pequeñas las columnas se apilan.
 - Atajo de teclado: `N` crea una tarea nueva.
+- **App instalable** en el móvil y el ordenador, con su propio icono. Abre a pantalla completa y, sin conexión, muestra la última copia de las tareas.
 
 ## Requisitos
 
@@ -37,7 +38,23 @@ Las tablas se crean solas la primera vez que se abre la app, así que no hay que
    `config.php` no se sube nunca a GitHub (está en `.gitignore`).
 4. **Primer acceso.** Abre `https://aiformconsulting.com/tareas`. La primera vez te pedirá crear el usuario y la contraseña. Después de eso, solo verás la pantalla de login.
 
-El logo sale de `/img/logo.png`, el mismo que usa la web. Si en algún momento cambia de sitio, se muestra solo el texto «AI Tarea».
+El logo sale de `/img/logo.png`, el mismo que usa la web. Si en algún momento cambia de sitio, se muestra solo el texto «AI Form Multi Tasks».
+
+## Instalarla como app
+
+La web funciona como app instalable (PWA). Para que se pueda instalar tiene que servirse por **HTTPS**, como ya hace aiformconsulting.com.
+
+| Dispositivo | Cómo se instala |
+|---|---|
+| Android (Chrome) | Botón **Instalar** de la app, o menú ⋮ > *Instalar aplicación* |
+| iPhone / iPad (Safari) | Botón **Instalar**, que explica los pasos: *Compartir* > *Añadir a pantalla de inicio* |
+| Ordenador (Chrome / Edge) | Botón **Instalar**, o el icono de instalar en la barra de direcciones |
+
+Al mantener pulsado el icono de la app aparece el acceso directo **Nueva tarea**.
+
+**Sin conexión:** la app abre igualmente y muestra la última copia guardada de los proyectos y tareas, en solo lectura. Al cerrar sesión, esa copia se borra del dispositivo.
+
+**Cuando publiques cambios**, sube el número de `VERSION` en `sw.js` (por ejemplo, de `v1` a `v2`) para que los dispositivos donde ya está instalada descarguen la versión nueva.
 
 ## Probarlo en tu ordenador
 
@@ -59,6 +76,8 @@ Después abre `http://localhost:8000`.
 | `login.php`, `logout.php`, `setup.php` | Acceso y alta del primer usuario |
 | `lib/` | Conexión a la base de datos, creación de tablas y sesión |
 | `assets/` | Estilos (`app.css`), lógica del tablero (`app.js`) e iconos |
+| `manifest.webmanifest`, `sw.js`, `offline.html` | App instalable: datos de la app, funcionamiento sin conexión y pantalla sin conexión |
+| `assets/pwa.js`, `assets/icons/` | Botón «Instalar» e iconos de la app |
 | `config.sample.php` | Plantilla de configuración |
 
 ## Seguridad

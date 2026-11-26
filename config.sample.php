@@ -15,5 +15,5 @@ return [
         // 'pass' => null,
     ],
     'timezone' => 'America/Denver',
-    'app_name' => 'AI Tarea',
+    'app_name' => 'AI Form Multi Tasks',
 ];

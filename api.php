@@ -232,6 +232,6 @@ try {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    error_log('[AI Tarea] ' . $ex->getMessage());
+    error_log('[AI Form Multi Tasks] ' . $ex->getMessage());
     fail('Error del servidor. Inténtalo de nuevo.', 500);
 }

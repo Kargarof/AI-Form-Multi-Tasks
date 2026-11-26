@@ -3,20 +3,20 @@ declare(strict_types=1);
 require __DIR__ . '/lib/bootstrap.php';
 require_login();
 $user = current_user();
-$appName = $config['app_name'] ?? 'AI Tarea';
+$appName = $config['app_name'] ?? 'AI Form Multi Tasks';
 ?><!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#111827">
 <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
 <title><?= e($appName) ?> · AI Form Consulting</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/app.css">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<?php include __DIR__ . '/lib/pwa_head.php'; ?>
 </head>
 <body>
 <header class="topbar">
@@ -29,6 +29,10 @@ $appName = $config['app_name'] ?? 'AI Tarea';
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
     <span>Proyecto</span>
   </button>
+  <button class="chip chip-install" id="installBtn" type="button" hidden title="Instalar la app en este dispositivo">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+    <span>Instalar</span>
+  </button>
   <form method="post" action="logout.php" class="logout">
     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
     <button class="icon-btn" type="submit" title="Cerrar sesión (<?= e($user['username']) ?>)" aria-label="Cerrar sesión">
@@ -36,6 +40,10 @@ $appName = $config['app_name'] ?? 'AI Tarea';
     </button>
   </form>
 </header>
+
+<div class="offline-bar" id="offlineBar" role="status" hidden>
+  Sin conexión · estás viendo la última copia guardada. Los cambios se podrán hacer cuando vuelva internet.
+</div>
 
 <main class="panel" id="panel">
   <div class="panel-head">
@@ -112,6 +120,19 @@ $appName = $config['app_name'] ?? 'AI Tarea';
       <button class="btn" type="button" data-close>Cancelar</button>
       <button class="btn btn-primary" type="submit">Guardar</button>
     </div>
+  </form>
+</dialog>
+
+<dialog id="installHelp" class="dialog">
+  <form method="dialog">
+    <h3>Instalar en iPhone o iPad</h3>
+    <ol class="install-steps">
+      <li>Abre esta página en <b>Safari</b>.</li>
+      <li>Pulsa el botón <b>Compartir</b> <span aria-hidden="true">(el cuadrado con la flecha hacia arriba)</span>.</li>
+      <li>Elige <b>Añadir a pantalla de inicio</b> y pulsa <b>Añadir</b>.</li>
+    </ol>
+    <p class="install-note">Se abrirá a pantalla completa, con su propio icono, como cualquier otra app.</p>
+    <div class="dialog-actions"><span class="spacer"></span><button class="btn btn-primary" type="submit">Entendido</button></div>
   </form>
 </dialog>
 
