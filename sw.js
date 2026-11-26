@@ -1,10 +1,11 @@
 /* AI Form Multi Tasks · service worker
- * - Pantalla principal y datos: primero la red; sin conexión, la última copia guardada (solo lectura).
+ * - Pantalla principal y datos: primero la red; sin conexión, la última copia guardada.
+ * - Los cambios hechos sin conexión los guarda app.js en el dispositivo y los envía después (api.php?action=sync).
  * - Estilos, scripts, iconos y fuentes: se sirven desde caché y se actualizan en segundo plano.
  * - Login, logout, alta y cualquier petición que cambie datos: siempre a la red, nunca se guardan.
- * Sube VERSION cada vez que publiques cambios.
+ * La publicación automática (GitHub Actions) cambia VERSION en cada despliegue.
  */
-const VERSION = 'v3';
+const VERSION = 'v4';
 const STATIC_CACHE = `aiform-mt-static-${VERSION}`;
 const DATA_CACHE = 'aiform-mt-data';
 const PRECACHE = [

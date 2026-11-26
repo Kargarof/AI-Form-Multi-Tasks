@@ -70,11 +70,13 @@ $csrf = csrf_token();
   <?php endif; ?>
   <?php if ($error): ?><p class="form-error" role="alert"><?= e($error) ?></p><?php endif; ?>
 
-  <p class="auth-intro">Tus proyectos y tareas, organizados en Pendiente, En curso y Completado. No hace falta registrarse.</p>
-
-  <p class="install-first" id="installFirst" hidden>
-    <b>En iPhone:</b> instala primero la app (<b>Compartir</b> → <b>Añadir a pantalla de inicio</b>) y ábrela desde su icono. Así tus tareas se quedan dentro de la app.
-  </p>
+  <div class="install-cta js-install-cta" hidden>
+    <button class="btn btn-install js-install" type="button" hidden>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+      Instalar la app en este dispositivo
+    </button>
+    <p class="hint">Tendrás su icono en la pantalla de inicio y se abrirá sin navegador. <span class="ios-only" hidden>En iPhone, instálala primero y entra desde el icono: así tus tareas se quedan dentro de la app.</span></p>
+  </div>
 
   <form method="post" class="auth-form">
     <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
@@ -105,11 +107,13 @@ $csrf = csrf_token();
   </details>
   <p class="legal-footer"><a href="privacidad.html">Privacidad</a> · <a href="condiciones.html">Condiciones</a></p>
 </main>
+<?php include __DIR__ . '/lib/install_ui.php'; ?>
 <script>
   (function () {
-    var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    if (ios && !standalone) document.getElementById('installFirst').hidden = false;
+    var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (!standalone) document.querySelector('.js-install-cta').hidden = false;
+    if (ios) document.querySelector('.ios-only').hidden = false;
   })();
 </script>
 </body>

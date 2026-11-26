@@ -16,7 +16,9 @@ Se publica en `https://aiformconsulting.com/tareas`.
 - **Código de acceso:** para entrar en la cuenta desde otro dispositivo sin usar Google.
 - Funciona en el móvil: en pantallas pequeñas las columnas se apilan.
 - Atajo de teclado: `N` crea una tarea nueva.
-- **App instalable** en el móvil y el ordenador, con su propio icono. Abre a pantalla completa y, sin conexión, muestra la última copia de las tareas.
+- **App instalable** en el móvil y el ordenador, con su propio icono. El botón «Instalar» aparece siempre que la app no está instalada y explica los pasos según el teléfono y el navegador.
+- **Funciona sin conexión:** se pueden crear, editar, mover y borrar tareas y proyectos. Los cambios se guardan en el dispositivo y se suben solos al volver internet.
+- **Conflictos resueltos:** si dos personas cambian lo mismo, decide quien creó el proyecto, o gana el cambio más reciente si así se configura.
 
 ## Requisitos
 
@@ -30,8 +32,8 @@ Las tablas se crean solas la primera vez que se abre la app, así que no hay que
 
 1. **Base de datos.** En el panel de IONOS, ve a *Hosting > Bases de datos* y crea una base MySQL. Apunta el servidor, el nombre de la base, el usuario y la contraseña.
 2. **Archivos.** Sube el contenido de este repositorio a una carpeta `tareas` en la raíz de la web, al lado de `index.html` y de la carpeta `img`. Tienes dos opciones:
-   - Por SFTP, por ejemplo con FileZilla, con los datos de acceso de *Hosting > SFTP & SSH*.
-   - Con **IONOS Deploy Now**, conectando este repositorio de GitHub y poniendo `tareas` como carpeta de destino.
+   - **Automático desde GitHub** (recomendado): ver «Publicación automática» más abajo.
+   - A mano por SFTP, por ejemplo con FileZilla, con los datos de *Hosting > SFTP & SSH*.
 3. **Configuración.** En el servidor, copia `config.sample.php` como `config.php` y rellena los datos de la base de datos:
    ```php
    'dsn'  => 'mysql:host=dbXXXXXXXX.hosting-data.io;port=3306;dbname=dbsXXXXXXXX;charset=utf8mb4',
@@ -43,6 +45,27 @@ Las tablas se crean solas la primera vez que se abre la app, así que no hay que
 5. **Listo.** Abre `https://aiformconsulting.com/tareas` y pulsa «Empezar».
 
 El logo sale de `/img/logo.png`, el mismo que usa la web. Si en algún momento cambia de sitio, se muestra solo el texto «AI Form Multi Tasks».
+
+## Publicación automática desde GitHub
+
+Cada vez que se sube un cambio a la rama `main`, GitHub Actions (`.github/workflows/deploy.yml`):
+1. Comprueba que el PHP no tiene errores.
+2. Pone una versión nueva en el service worker, para que los móviles con la app instalada se actualicen solos.
+3. Copia los archivos por SFTP a la carpeta de la app en IONOS y borra los que ya no existan en el repositorio.
+4. Comprueba que `https://aiformconsulting.com/tareas` responde.
+
+**Nunca se sube ni se borra** `config.php` ni la carpeta `data/` del servidor, así que la configuración y las claves se quedan solo allí.
+
+**Configuración inicial** (una sola vez). En GitHub, ve a *Settings > Secrets and variables > Actions > New repository secret* y crea estos cuatro secretos con los datos de IONOS (*Hosting > SFTP & SSH*):
+
+| Secreto | Qué poner |
+|---|---|
+| `SFTP_HOST` | El servidor, p. ej. `access-5012345678.webspace-host.com` |
+| `SFTP_USER` | El usuario SFTP |
+| `SFTP_PASSWORD` | La contraseña de ese usuario |
+| `SFTP_PATH` | La carpeta de la app tal como la ves al conectarte por SFTP, p. ej. `/tareas` |
+
+Mientras falten secretos, la publicación se salta con un aviso, sin errores. Para publicar sin subir cambios: pestaña *Actions > Publicar en aiformconsulting.com/tareas > Run workflow*.
 
 ## Iniciar sesión con Google
 
@@ -84,6 +107,15 @@ Mientras estos datos estén vacíos, el botón de Google no aparece y la app fun
 - Los demás pueden crear, editar, mover y completar tareas, y salir del proyecto cuando quieran.
 - En los proyectos compartidos, cada tarjeta indica quién hizo el último cambio. El tablero se actualiza solo cada 20 segundos y al volver a la app.
 
+**Sin conexión y conflictos.**
+- La app guarda una copia de todos tus proyectos en el dispositivo y trabaja sobre ella. Cada cambio se apunta en una cola y se envía al servidor en cuanto hay internet. Si se corta a mitad, no se aplica dos veces.
+- Cada cambio lleva el valor que tenía la tarea cuando se editó. Si otra persona cambió **otro** campo de la misma tarea (por ejemplo, una las notas y otra el estado), se juntan los dos cambios.
+- Si dos personas cambian **el mismo** campo, lo decide la opción del proyecto (en *Editar proyecto*):
+  - **Decido yo** (por defecto): se mantiene la versión actual y quien creó el proyecto ve «Por revisar» para elegir cuál se queda.
+  - **Gana el más reciente:** se queda automáticamente el cambio hecho más tarde.
+- Entre dispositivos de la misma persona gana siempre el cambio más reciente.
+- Lo que necesita al servidor en el momento (compartir, invitar, eliminar un proyecto ya guardado, la cuenta) pide conexión.
+
 **Preparado para crecer.** La base de datos ya tiene un campo `plan` por usuario y un sistema de versiones del esquema (`lib/db.php`). Así se pueden añadir más adelante el registro con email o los planes de pago sin perder datos.
 
 ## Instalarla como app
@@ -100,7 +132,7 @@ Al mantener pulsado el icono de la app aparece el acceso directo **Nueva tarea**
 
 **Sin conexión:** la app abre igualmente y muestra la última copia guardada de los proyectos y tareas, en solo lectura. Al cerrar sesión, esa copia se borra del dispositivo.
 
-**Cuando publiques cambios**, sube el número de `VERSION` en `sw.js` (por ejemplo, de `v3` a `v4`) para que los dispositivos donde ya está instalada descarguen la versión nueva.
+**Actualizaciones:** la publicación automática cambia la versión del service worker en cada cambio, así que los dispositivos con la app instalada descargan la nueva versión la próxima vez que la abren con conexión.
 
 ## Probarlo en tu ordenador
 
@@ -118,7 +150,9 @@ Después abre `http://localhost:8000`.
 | Archivo | Para qué sirve |
 |---|---|
 | `index.php` | Pantalla principal: proyectos y tablero |
-| `api.php` | API JSON que usa el tablero: proyectos, tareas, cuenta y compartir |
+| `api.php` | API JSON que usa el tablero: sincronización, proyectos, conflictos, cuenta y compartir |
+| `lib/sync.php` | Sincronización sin conexión: cola de cambios, fusión campo a campo y conflictos |
+| `.github/workflows/deploy.yml` | Publicación automática en IONOS |
 | `welcome.php` | Pantalla de bienvenida: Empezar, Continuar con Google o código de acceso |
 | `oauth.php`, `lib/google.php` | Inicio de sesión con Google (OAuth 2.0 con PKCE) |
 | `lib/` | Base de datos y versiones del esquema, cuentas y dispositivos, sesión |

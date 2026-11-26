@@ -365,3 +365,33 @@ body.auth { display: grid; place-items: center; padding: 16px; }
 .legal-footer a { color: var(--muted); }
 .legal-footer a:hover { color: var(--gold); }
 @media (max-width: 640px) { .legal { width: calc(100% - 32px); margin-top: 16px; } }
+
+/* ---------- Instalar ---------- */
+.install-cta { margin: 0 0 18px; display: flex; flex-direction: column; gap: 8px; }
+.btn-install {
+  width: 100%; height: 48px; font-size: 15px;
+  background: linear-gradient(180deg, rgba(199,170,137,.22), rgba(199,170,137,.10));
+  border: 1px solid var(--gold); color: var(--gold-strong);
+}
+.btn-install:hover { background: rgba(199,170,137,.25); border-color: var(--gold-strong); }
+.install-cta .hint { text-align: left; margin: 0; }
+
+/* ---------- Sin conexión y conflictos ---------- */
+.offline-bar.syncing { background: rgba(127,201,163,.10); border-color: rgba(127,201,163,.4); color: #b9e4cd; }
+.tag.pending { display: inline-flex; align-items: center; gap: 4px; background: rgba(199,170,137,.12); color: var(--gold-strong); }
+.pill-warn { color: #f2c48d; border-color: rgba(242,196,141,.45); background: rgba(242,196,141,.10); gap: 6px; }
+.chip-count.warn { background: #f2c48d; color: #1b222e; }
+.radio-list { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.radio-list legend { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; padding: 0; }
+.radio-list label { flex-direction: row; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--navy-900); border: 1px solid var(--line); font-weight: 400; cursor: pointer; }
+.radio-list input { width: auto; margin-top: 3px; accent-color: var(--gold); }
+.radio-list b { color: var(--text); }
+.conflict-list { display: flex; flex-direction: column; gap: 12px; max-height: 60vh; overflow: auto; }
+.conflict { padding: 14px; border-radius: 12px; background: var(--navy-900); border: 1px solid rgba(242,196,141,.35); display: flex; flex-direction: column; gap: 8px; }
+.conflict h4 { margin: 0; font-size: 15px; }
+.cf-row { display: grid; grid-template-columns: 80px 1fr 1fr; gap: 8px; align-items: start; font-size: 14px; }
+.cf-label { color: var(--muted); font-size: 12px; padding-top: 2px; }
+.cf-cur, .cf-new { display: flex; flex-direction: column; gap: 2px; padding: 8px; border-radius: 8px; background: #1a212c; overflow-wrap: anywhere; }
+.cf-new { border: 1px solid var(--gold-line); }
+.cf-cur small, .cf-new small { color: var(--muted); font-size: 11px; }
+@media (max-width: 640px) { .cf-row { grid-template-columns: 1fr; } }

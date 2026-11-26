@@ -1,0 +1,87 @@
+# Publica la app en aiformconsulting.com/tareas cada vez que se sube un cambio a la rama main.
+# Necesita 4 secretos en GitHub (Settings > Secrets and variables > Actions):
+#   SFTP_HOST      servidor SFTP de IONOS (p. ej. access-5012345678.webspace-host.com)
+#   SFTP_USER      usuario SFTP de IONOS
+#   SFTP_PASSWORD  contraseña de ese usuario SFTP
+#   SFTP_PATH      carpeta de la app en el servidor (p. ej. /tareas)
+# Nunca se sube ni se borra config.php ni la carpeta data/ del servidor.
+
+name: Publicar en aiformconsulting.com/tareas
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-produccion
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Comprobar que los secretos están configurados
+        id: secrets
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_USER: ${{ secrets.SFTP_USER }}
+          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
+          SFTP_PATH: ${{ secrets.SFTP_PATH }}
+        run: |
+          missing=""
+          for v in SFTP_HOST SFTP_USER SFTP_PASSWORD SFTP_PATH; do
+            [ -z "${!v}" ] && missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::warning::No se publica: faltan secretos en GitHub:$missing (Settings > Secrets and variables > Actions)"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comprobar el código PHP
+        run: |
+          for f in $(git ls-files '*.php'); do php -l "$f" > /dev/null || exit 1; done
+          echo "PHP sin errores"
+
+      - name: Nueva versión del service worker (para que los móviles se actualicen)
+        if: steps.secrets.outputs.ok == 'true'
+        run: sed -i "s/const VERSION = '[^']*';/const VERSION = '${GITHUB_SHA::8}';/" sw.js
+
+      - name: Instalar lftp
+        if: steps.secrets.outputs.ok == 'true'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Subir a IONOS por SFTP
+        if: steps.secrets.outputs.ok == 'true'
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_USER: ${{ secrets.SFTP_USER }}
+          LFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
+          SFTP_PATH: ${{ secrets.SFTP_PATH }}
+        run: |
+          lftp -c "
+            set sftp:auto-confirm yes;
+            set net:timeout 30; set net:max-retries 3; set net:reconnect-interval-base 5;
+            open --env-password -u \"$SFTP_USER\" sftp://$SFTP_HOST;
+            mirror --reverse --delete --parallel=4 --verbose=1 \
+              --exclude-glob .git* \
+              --exclude-glob .github/ \
+              --exclude ^config\.php$ \
+              --exclude ^data/ \
+              --exclude ^README\.md$ \
+              ./ \"$SFTP_PATH\";
+          "
+
+      - name: Comprobar que la web responde
+        if: steps.secrets.outputs.ok == 'true'
+        run: |
+          sleep 3
+          code=$(curl -s -o /dev/null -w "%{http_code}" https://aiformconsulting.com/tareas/welcome.php)
+          echo "welcome.php → HTTP $code"
+          [ "$code" = "200" ] || { echo "::error::La app no responde (HTTP $code)"; exit 1; }

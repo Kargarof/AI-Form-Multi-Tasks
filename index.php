@@ -36,7 +36,7 @@ unset($_SESSION['flash']);
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
     <span>Proyecto</span>
   </button>
-  <button class="chip chip-install" id="installBtn" type="button" hidden title="Instalar la app en este dispositivo">
+  <button class="chip chip-install js-install" id="installBtn" type="button" hidden title="Instalar la app en este dispositivo">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
     <span>Instalar</span>
   </button>
@@ -49,9 +49,7 @@ unset($_SESSION['flash']);
   </button>
 </header>
 
-<div class="offline-bar" id="offlineBar" role="status" hidden>
-  Sin conexión · estás viendo la última copia guardada. Los cambios se podrán hacer cuando vuelva internet.
-</div>
+<div class="offline-bar" id="offlineBar" role="status" aria-live="polite" hidden></div>
 
 <main class="panel" id="panel">
   <div class="panel-head">
@@ -61,6 +59,10 @@ unset($_SESSION['flash']);
       <h1 id="projectTitle">Cargando…</h1>
     </div>
     <div class="head-actions">
+      <button class="pill pill-btn pill-warn" id="conflictBtn" type="button" hidden>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17.5v.5"/></svg>
+        <span>Por revisar</span>
+      </button>
       <span class="pill" id="progressPill" hidden></span>
       <button class="pill pill-btn" id="shareBtn" type="button" hidden>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.8-3 3-4.6 5.5-4.6s4.7 1.6 5.5 4.6"/><path d="M16 6.5a3 3 0 0 1 0 5.6M18 14.6c1.3.6 2.2 2 2.5 4.4"/></svg>
@@ -126,6 +128,11 @@ unset($_SESSION['flash']);
   <form method="dialog" id="projectForm">
     <h3 id="projectDialogTitle">Nuevo proyecto</h3>
     <label>Nombre del proyecto<input name="name" maxlength="120" required autofocus></label>
+    <fieldset class="radio-list" id="conflictSettings" hidden>
+      <legend>Si dos personas cambian lo mismo sin conexión</legend>
+      <label><input type="radio" name="conflict_mode" value="owner"><span><b>Decido yo</b> · los cambios que choquen quedan pendientes y eliges qué versión se queda</span></label>
+      <label><input type="radio" name="conflict_mode" value="latest"><span><b>Gana el más reciente</b> · se queda automáticamente el último cambio</span></label>
+    </fieldset>
     <div class="dialog-actions">
       <button class="btn btn-danger" type="button" id="deleteProjectBtn" hidden>Eliminar proyecto</button>
       <span class="spacer"></span>
@@ -179,6 +186,15 @@ unset($_SESSION['flash']);
       <span class="spacer"></span>
       <button class="btn btn-primary" type="button" data-close>Listo</button>
     </div>
+  </div>
+</dialog>
+
+<dialog id="conflictDialog" class="dialog dialog-wide">
+  <div class="dialog-body">
+    <h3>Cambios por revisar</h3>
+    <p class="dialog-intro">Dos personas cambiaron lo mismo mientras alguna estaba sin conexión. Como creaste el proyecto, eliges qué versión se queda.</p>
+    <div id="conflictList" class="conflict-list"></div>
+    <div class="dialog-actions"><span class="spacer"></span><button class="btn btn-primary" type="button" data-close>Listo</button></div>
   </div>
 </dialog>
 
@@ -239,18 +255,7 @@ unset($_SESSION['flash']);
   </div>
 </dialog>
 
-<dialog id="installHelp" class="dialog">
-  <form method="dialog">
-    <h3>Instalar en iPhone o iPad</h3>
-    <ol class="install-steps">
-      <li>Abre esta página en <b>Safari</b>.</li>
-      <li>Pulsa el botón <b>Compartir</b> <span aria-hidden="true">(el cuadrado con la flecha hacia arriba)</span>.</li>
-      <li>Elige <b>Añadir a pantalla de inicio</b> y pulsa <b>Añadir</b>.</li>
-    </ol>
-    <p class="install-note">Se abrirá a pantalla completa, con su propio icono, como cualquier otra app.</p>
-    <div class="dialog-actions"><span class="spacer"></span><button class="btn btn-primary" type="submit">Entendido</button></div>
-  </form>
-</dialog>
+<?php include __DIR__ . '/lib/install_ui.php'; ?>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 

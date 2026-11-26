@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/lib/bootstrap.php';
+require __DIR__ . '/lib/sync.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -26,95 +27,7 @@ function int_param(array $src, string $key): int
     return (int) $v;
 }
 
-function clean_text(mixed $v, int $max): string
-{
-    $s = trim(preg_replace('/\s+/u', ' ', (string) $v) ?? '');
-    return mb_substr($s, 0, $max);
-}
-
-function clean_notes(mixed $v): ?string
-{
-    $s = trim(str_replace("\r\n", "\n", (string) ($v ?? '')));
-    return $s === '' ? null : mb_substr($s, 0, 10000);
-}
-
-function clean_date(mixed $v): ?string
-{
-    $s = trim((string) ($v ?? ''));
-    if ($s === '') {
-        return null;
-    }
-    $d = DateTime::createFromFormat('Y-m-d', $s);
-    if (!$d || $d->format('Y-m-d') !== $s) {
-        fail('Fecha no válida.');
-    }
-    return $s;
-}
-
-function clean_status(mixed $v): string
-{
-    $s = (string) $v;
-    if (!in_array($s, TASK_STATUSES, true)) {
-        fail('Estado no válido.');
-    }
-    return $s;
-}
-
-/** Comprueba que el usuario es miembro del proyecto. Devuelve su rol. */
-function membership(int $projectId, int $userId): string
-{
-    $stmt = db()->prepare('SELECT role FROM project_members WHERE project_id = ? AND user_id = ?');
-    $stmt->execute([$projectId, $userId]);
-    $role = $stmt->fetchColumn();
-    if (!$role) {
-        fail('Este proyecto no existe o ya no tienes acceso.', 404);
-    }
-    return (string) $role;
-}
-
-function require_owner(int $projectId, int $userId): void
-{
-    if (membership($projectId, $userId) !== 'owner') {
-        fail('Solo la persona que creó el proyecto puede hacer esto.', 403);
-    }
-}
-
-function load_task(int $id, int $userId): array
-{
-    $stmt = db()->prepare('SELECT t.*, u.display_name AS updated_by_name FROM tasks t LEFT JOIN users u ON u.id = t.updated_by WHERE t.id = ?');
-    $stmt->execute([$id]);
-    $row = $stmt->fetch();
-    if (!$row) {
-        fail('La tarea ya no existe.', 404);
-    }
-    membership((int) $row['project_id'], $userId);
-    return normalize_task($row);
-}
-
-function normalize_task(array $t): array
-{
-    return [
-        'id'              => (int) $t['id'],
-        'project_id'      => (int) $t['project_id'],
-        'title'           => $t['title'],
-        'notes'           => $t['notes'],
-        'due_date'        => $t['due_date'] ? substr((string) $t['due_date'], 0, 10) : null,
-        'status'          => $t['status'],
-        'position'        => (int) $t['position'],
-        'updated_at'      => $t['updated_at'],
-        'updated_by'      => $t['updated_by'] !== null ? (int) $t['updated_by'] : null,
-        'updated_by_name' => $t['updated_by_name'] ?? null,
-    ];
-}
-
-function next_position(int $projectId, string $status): int
-{
-    $stmt = db()->prepare('SELECT COALESCE(MAX(position), 0) + 1 FROM tasks WHERE project_id = ? AND status = ?');
-    $stmt->execute([$projectId, $status]);
-    return (int) $stmt->fetchColumn();
-}
-
-function random_code(int $len = 10): string
+function random_code(int $len = 12): string
 {
     $alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
     $s = '';
@@ -126,9 +39,9 @@ function random_code(int $len = 10): string
 
 function sharing_state(int $projectId, int $userId): array
 {
-    $m = db()->prepare('SELECT u.id, u.display_name, u.email, u.avatar_url, pm.role
+    $m = db()->prepare("SELECT u.id, u.display_name, u.email, u.avatar_url, pm.role
         FROM project_members pm JOIN users u ON u.id = pm.user_id
-        WHERE pm.project_id = ? ORDER BY pm.role = \'owner\' DESC, pm.joined_at');
+        WHERE pm.project_id = ? ORDER BY pm.role = 'owner' DESC, pm.joined_at");
     $m->execute([$projectId]);
     $members = array_map(static fn ($r) => [
         'id'     => (int) $r['id'],
@@ -150,7 +63,9 @@ function sharing_state(int $projectId, int $userId): array
             $pending[] = ['id' => (int) $inv['id'], 'email' => $inv['email']];
         }
     }
-    return ['members' => $members, 'pending' => $pending, 'link' => $link];
+    $mode = db()->prepare('SELECT conflict_mode FROM projects WHERE id = ?');
+    $mode->execute([$projectId]);
+    return ['members' => $members, 'pending' => $pending, 'link' => $link, 'conflict_mode' => (string) $mode->fetchColumn()];
 }
 
 // ---------------------------------------------------------------------------
@@ -181,10 +96,10 @@ try {
     switch ("$method $action") {
         // ---------- Cuenta ----------
         case 'GET me':
-            respond(['user' => public_user($user), 'google' => google_enabled()]);
+            respond(['user' => public_user($user), 'google' => google_enabled(), 'csrf' => csrf_token()]);
 
         case 'POST me_update':
-            $name = clean_text($in['name'] ?? '', 80);
+            $name = mb_substr(trim(preg_replace('/\s+/u', ' ', (string) ($in['name'] ?? '')) ?? ''), 0, 80);
             $pdo->prepare('UPDATE users SET display_name = ? WHERE id = ?')->execute([$name !== '' ? $name : null, $uid]);
             respond(['user' => public_user(current_user(true))]);
 
@@ -195,14 +110,28 @@ try {
             sign_out_device();
             respond(['ok' => true]);
 
+        // ---------- Sincronización (todas las altas y cambios de tareas y proyectos) ----------
+        case 'POST sync':
+            $ops = $in['ops'] ?? [];
+            if (!is_array($ops) || count($ops) > 100) {
+                fail('Petición no válida.');
+            }
+            $results = [];
+            foreach ($ops as $op) {
+                $results[] = is_array($op) ? process_op($op, $uid) : ['status' => 'rejected', 'error' => 'Operación no válida.'];
+            }
+            sync_housekeeping();
+            respond(['results' => $results]);
+
         // ---------- Proyectos ----------
         case 'GET projects':
             $stmt = $pdo->prepare(
-                "SELECT p.id, p.name, pm.role, pm.position, o.display_name AS owner_name, o.email AS owner_email,
+                "SELECT p.id, p.client_id, p.name, p.conflict_mode, pm.role, pm.position, o.display_name AS owner_name, o.email AS owner_email,
                     (SELECT COUNT(*) FROM project_members x WHERE x.project_id = p.id) AS members,
-                    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.status = 'pendiente') AS c_p,
-                    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.status = 'en_curso') AS c_e,
-                    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.status = 'completado') AS c_c
+                    (SELECT COUNT(*) FROM task_conflicts c WHERE c.project_id = p.id) AS conflicts,
+                    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL AND t.status = 'pendiente') AS c_p,
+                    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL AND t.status = 'en_curso') AS c_e,
+                    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL AND t.status = 'completado') AS c_c
                  FROM project_members pm
                  JOIN projects p ON p.id = pm.project_id
                  JOIN users o ON o.id = p.owner_id
@@ -211,31 +140,16 @@ try {
             );
             $stmt->execute([$uid]);
             respond(['projects' => array_map(static fn ($p) => [
-                'id'      => (int) $p['id'],
-                'name'    => $p['name'],
-                'role'    => $p['role'],
-                'members' => (int) $p['members'],
-                'owner'   => $p['role'] === 'owner' ? null : ($p['owner_name'] ?: ($p['owner_email'] ?: 'Otra persona')),
-                'counts'  => ['pendiente' => (int) $p['c_p'], 'en_curso' => (int) $p['c_e'], 'completado' => (int) $p['c_c']],
+                'id'            => (int) $p['id'],
+                'client_id'     => $p['client_id'],
+                'name'          => $p['name'],
+                'role'          => $p['role'],
+                'members'       => (int) $p['members'],
+                'conflict_mode' => $p['conflict_mode'],
+                'conflicts'     => $p['role'] === 'owner' ? (int) $p['conflicts'] : 0,
+                'owner'         => $p['role'] === 'owner' ? null : ($p['owner_name'] ?: ($p['owner_email'] ?: 'Otra persona')),
+                'counts'        => ['pendiente' => (int) $p['c_p'], 'en_curso' => (int) $p['c_e'], 'completado' => (int) $p['c_c']],
             ], $stmt->fetchAll())]);
-
-        case 'POST project_save':
-            $name = clean_text($in['name'] ?? '', 120);
-            if ($name === '') {
-                fail('El proyecto necesita un nombre.');
-            }
-            if (!empty($in['id'])) {
-                $id = int_param($in, 'id');
-                require_owner($id, $uid);
-                $pdo->prepare('UPDATE projects SET name = ? WHERE id = ?')->execute([$name, $id]);
-            } else {
-                $pdo->beginTransaction();
-                $pdo->prepare('INSERT INTO projects (owner_id, name, created_at) VALUES (?, ?, ?)')->execute([$uid, $name, now()]);
-                $id = (int) $pdo->lastInsertId();
-                add_member($id, $uid, 'owner');
-                $pdo->commit();
-            }
-            respond(['project' => ['id' => $id, 'name' => $name]]);
 
         case 'POST project_delete':
             $id = int_param($in, 'id');
@@ -245,16 +159,40 @@ try {
 
         case 'POST project_leave':
             $id = int_param($in, 'id');
-            if (membership($id, $uid) === 'owner') {
+            if (require_member($id, $uid) === 'owner') {
                 fail('Eres quien creó el proyecto: puedes eliminarlo, pero no salir de él.');
             }
             $pdo->prepare('DELETE FROM project_members WHERE project_id = ? AND user_id = ?')->execute([$id, $uid]);
             respond(['ok' => true]);
 
+        case 'POST project_settings':
+            $id = int_param($in, 'id');
+            require_owner($id, $uid);
+            $mode = (string) ($in['conflict_mode'] ?? '');
+            if (!in_array($mode, CONFLICT_MODES, true)) {
+                fail('Opción no válida.');
+            }
+            $pdo->prepare('UPDATE projects SET conflict_mode = ? WHERE id = ?')->execute([$mode, $id]);
+            respond(['ok' => true, 'conflict_mode' => $mode]);
+
+        // ---------- Conflictos ----------
+        case 'GET conflicts':
+            $id = int_param($_GET, 'project_id');
+            require_owner($id, $uid);
+            respond(['conflicts' => conflicts_for_project($id)]);
+
+        case 'POST conflict_resolve':
+            $choice = (string) ($in['choice'] ?? '');
+            if (!in_array($choice, ['current', 'incoming'], true)) {
+                fail('Opción no válida.');
+            }
+            resolve_conflict(int_param($in, 'id'), $choice, $uid);
+            respond(['ok' => true]);
+
         // ---------- Compartir ----------
         case 'GET sharing':
             $id = int_param($_GET, 'project_id');
-            $role = membership($id, $uid);
+            $role = require_member($id, $uid);
             respond(['role' => $role, 'google' => google_enabled()] + sharing_state($id, $uid));
 
         case 'POST invite_email':
@@ -320,13 +258,11 @@ try {
             if (!$p) {
                 fail('Esta invitación ya no es válida. Pide un enlace nuevo.', 404);
             }
-            $m = $pdo->prepare('SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?');
-            $m->execute([$p['id'], $uid]);
             respond(['project' => [
                 'id'     => (int) $p['id'],
                 'name'   => $p['name'],
                 'owner'  => $p['owner_name'] ?: ($p['owner_email'] ?: 'Otra persona'),
-                'member' => (bool) $m->fetchColumn(),
+                'member' => member_role((int) $p['id'], $uid) !== null,
             ]]);
 
         case 'POST join':
@@ -343,63 +279,17 @@ try {
         // ---------- Tareas ----------
         case 'GET tasks':
             $pid = int_param($_GET, 'project_id');
-            membership($pid, $uid);
-            $stmt = $pdo->prepare('SELECT t.*, u.display_name AS updated_by_name FROM tasks t LEFT JOIN users u ON u.id = t.updated_by WHERE t.project_id = ? ORDER BY t.position, t.id');
+            require_member($pid, $uid);
+            $stmt = $pdo->prepare('SELECT t.*, u.display_name AS updated_by_name FROM tasks t LEFT JOIN users u ON u.id = t.updated_by
+                WHERE t.project_id = ? AND t.deleted_at IS NULL ORDER BY t.position, t.id');
             $stmt->execute([$pid]);
             respond(['tasks' => array_map('normalize_task', $stmt->fetchAll())]);
-
-        case 'POST task_save':
-            $title = clean_text($in['title'] ?? '', 255);
-            if ($title === '') {
-                fail('La tarea necesita un título.');
-            }
-            $pid = int_param($in, 'project_id');
-            membership($pid, $uid);
-            $notes  = clean_notes($in['notes'] ?? null);
-            $due    = clean_date($in['due_date'] ?? null);
-            $status = clean_status($in['status'] ?? 'pendiente');
-
-            if (!empty($in['id'])) {
-                $id = int_param($in, 'id');
-                $old = load_task($id, $uid);
-                $pos = ($old['status'] !== $status || $old['project_id'] !== $pid) ? next_position($pid, $status) : $old['position'];
-                $pdo->prepare('UPDATE tasks SET project_id = ?, title = ?, notes = ?, due_date = ?, status = ?, position = ?, updated_by = ?, updated_at = ? WHERE id = ?')
-                    ->execute([$pid, $title, $notes, $due, $status, $pos, $uid, now(), $id]);
-            } else {
-                $pdo->prepare('INSERT INTO tasks (project_id, title, notes, due_date, status, position, created_by, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-                    ->execute([$pid, $title, $notes, $due, $status, next_position($pid, $status), $uid, $uid, now(), now()]);
-                $id = (int) $pdo->lastInsertId();
-            }
-            respond(['task' => load_task($id, $uid)]);
-
-        case 'POST task_move':
-            $id = int_param($in, 'id');
-            $status = clean_status($in['status'] ?? '');
-            $order = $in['order'] ?? [];
-            if (!is_array($order)) {
-                fail('Orden no válido.');
-            }
-            $task = load_task($id, $uid);
-            $pdo->beginTransaction();
-            $pdo->prepare('UPDATE tasks SET status = ?, updated_by = ?, updated_at = ? WHERE id = ?')->execute([$status, $uid, now(), $id]);
-            $upd = $pdo->prepare('UPDATE tasks SET position = ? WHERE id = ? AND project_id = ? AND status = ?');
-            foreach (array_values($order) as $i => $tid) {
-                if (is_numeric($tid)) {
-                    $upd->execute([$i + 1, (int) $tid, $task['project_id'], $status]);
-                }
-            }
-            $pdo->commit();
-            respond(['task' => load_task($id, $uid)]);
-
-        case 'POST task_delete':
-            $id = int_param($in, 'id');
-            load_task($id, $uid);
-            $pdo->prepare('DELETE FROM tasks WHERE id = ?')->execute([$id]);
-            respond(['ok' => true]);
 
         default:
             fail('Acción desconocida.', 404);
     }
+} catch (SyncReject $ex) {
+    fail($ex->getMessage(), in_array($ex->getCode(), [403, 404], true) ? $ex->getCode() : 400);
 } catch (Throwable $ex) {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
