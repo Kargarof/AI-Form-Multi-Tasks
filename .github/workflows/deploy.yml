@@ -69,9 +69,11 @@ jobs:
             set sftp:auto-confirm yes;
             set net:timeout 30; set net:max-retries 3; set net:reconnect-interval-base 5;
             open --env-password -u \"$SFTP_USER\" sftp://$SFTP_HOST;
+            rm -r -f \"$SFTP_PATH/.git\";
             mirror --reverse --delete --parallel=4 --verbose=1 \
-              --exclude-glob .git* \
-              --exclude-glob .github/ \
+              --exclude ^\.git/ \
+              --exclude ^\.gitignore$ \
+              --exclude ^\.github/ \
               --exclude ^config\.php$ \
               --exclude ^data/ \
               --exclude ^README\.md$ \
